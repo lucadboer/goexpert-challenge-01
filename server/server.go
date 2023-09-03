@@ -12,6 +12,10 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+type Response struct {
+	USDBRL Cotation `json:"USDBRL"`
+}
+
 type Cotation struct {
 	Code       string `json:"code"`
 	Codein     string `json:"codein"`
@@ -28,7 +32,7 @@ type Cotation struct {
 
 func checkError(err error) {
 	if err != nil {
-		panic(err)
+		print(err)
 	}
 }
 
@@ -42,16 +46,13 @@ func main() {
 
 func getCotationHandler(w http.ResponseWriter, r *http.Request) {
 	cotation := getCotation()
-	cotationJSON, err := json.Marshal(cotation)
-
-	checkError(err)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(cotationJSON)
+	json.NewEncoder(w).Encode(cotation)
 }
 
-func saveCotationToDB(cotations map[string]Cotation) {
+func saveCotationToDB(cotation *Cotation) {
 	db, err := sql.Open("sqlite3", "cotation.db")
 
 	checkError(err)
@@ -71,22 +72,18 @@ func saveCotationToDB(cotations map[string]Cotation) {
 		timestamp TEXT,
 		create_date TEXT
 )`)
-
 	checkError(err)
 
 	stmt, err := db.Prepare("INSERT OR REPLACE INTO cotation (code, codein, name, high, low, varBid, pctChange, bid, ask, timestamp, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-
 	checkError(err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 
-	for _, cot := range cotations {
-		_, err := stmt.ExecContext(ctx,
-			cot.Code, cot.Codein, cot.Name, cot.High, cot.Low, cot.VarBid, cot.PctChange, cot.Bid, cot.Ask, cot.Timestamp, cot.CreateDate)
+	_, err = stmt.ExecContext(ctx,
+		cotation.Code, cotation.Codein, cotation.Name, cotation.High, cotation.Low, cotation.VarBid, cotation.PctChange, cotation.Bid, cotation.Ask, cotation.Timestamp, cotation.CreateDate)
 
-		checkError(err)
-	}
+	checkError(err)
 }
 
 func getCotation() *Cotation {
@@ -94,24 +91,18 @@ func getCotation() *Cotation {
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://economia.awesomeapi.com.br/json/last/USD-BRL", nil)
-
 	checkError(err)
 
 	res, err := http.DefaultClient.Do(req)
 	checkError(err)
+
 	defer res.Body.Close()
 
-	var cotationData map[string]Cotation
-
-	decoder := json.NewDecoder(res.Body)
-	err = decoder.Decode(&cotationData)
+	var response Response
+	err = json.NewDecoder(res.Body).Decode(&response)
 	checkError(err)
 
-	saveCotationToDB(cotationData)
+	saveCotationToDB(&response.USDBRL)
 
-	for _, c := range cotationData {
-		return &c
-	}
-
-	return &Cotation{}
+	return &response.USDBRL
 }
