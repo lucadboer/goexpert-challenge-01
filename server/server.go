@@ -32,7 +32,7 @@ type Cotation struct {
 
 func checkError(err error) {
 	if err != nil {
-		print(err)
+		panic(err)
 	}
 }
 
