@@ -1,4 +1,4 @@
-# Dollar exchange rate challenge
+# Cotação do dólar
 
 ## Descrição
 
@@ -33,7 +33,7 @@ Este prójeto consiste em um aplicativo de servidor HTTP feita em Go que busca e
 
 2. **Clonar o Repositório**:
     ```bash
-    git clone https://github.com/lucadboer/goexpert-challenge-01.git || git@github.com:lucadboer/goexpert-challenge-01.git
+    git clone https://github.com/lucadboer/goexpert-challenge-01.git
     cd goexpert-challenge-01
     ```
 
